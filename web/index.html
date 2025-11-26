@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TODO List</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <style>
+        :root{--card-radius:10px}
+        body{background:#f6f8fb;color:#222}
+        .app-container{max-width:1100px;margin:24px auto}
+        .task-card{border-radius:var(--card-radius);box-shadow:0 6px 18px rgba(20,30,60,0.06);}
+        .task-title.done{text-decoration:line-through;color:#8a8f98}
+        .priority-high{background:#ff6b6b;color:#fff}
+        .priority-medium{background:#ffb84d;color:#222}
+        .priority-low{background:#8bd3a7;color:#fff}
+        .muted-small{font-size:.85rem;color:#6c757d}
+        .no-tasks{padding:36px;text-align:center}
+        .card-subtle{background:linear-gradient(180deg, rgba(255,255,255,0.6), rgba(250,250,250,0.6));}
+
+        /* 截止时间高亮样式 */
+        .due-badge{display:inline-block;padding:2px 6px;border-radius:6px;font-size:0.8rem}
+        .due-normal{background:transparent;color:inherit}
+        .due-soon{background:#fff3cd;color:#856404}    /* 黄色背景（临近1小时） */
+        .due-overdue{background:#f8d7da;color:#842029} /* 红色背景（已过期） */
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-white bg-white border-bottom">
+    <div class="container app-container">
+        <a class="navbar-brand fw-bold" href="#">TODO 管理</a>
+        <div class="ms-auto d-flex align-items-center gap-3">
+            <div class="text-muted small">任务总数</div>
+            <span id="taskCount" class="badge bg-primary">0</span>
+        </div>
+    </div>
+</nav>
+
+<div class="app-container">
+    <div class="row g-4">
+        <!-- 左侧 / 添加表单 -->
+        <div class="col-lg-4">
+            <div class="card card-subtle p-3">
+                <h5 class="mb-3">新增任务</h5>
+                <form id="addForm">
+                    <div class="mb-2">
+                        <label for="title" class="form-label small">标题</label>
+                        <input id="title" class="form-control form-control-sm" placeholder="写点什么……" required />
+                    </div>
+                    <div class="mb-2">
+                        <label for="desc" class="form-label small">描述</label>
+                        <textarea id="desc" class="form-control form-control-sm" rows="3" placeholder="可选"></textarea>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label for="category" class="form-label small">分类</label>
+                            <input id="category" class="form-control form-control-sm" placeholder="work / life" />
+                        </div>
+
+                    </div>
+                    <div class="mb-3">
+                        <label for="dueDate" class="form-label small">截止日期</label>
+                        <input id="dueDate" type="datetime-local" class="form-control form-control-sm" />
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm">添加任务</button>
+                        <button id="clearBtn" type="button" class="btn btn-outline-secondary btn-sm">清空</button>
+                    </div>
+                    <div id="addAlert" class="mt-2"></div>
+                </form>
+
+                <hr />
+                <div class="muted-small">提示：可通过右侧搜索、分类筛选快速定位任务</div>
+                <div class="muted-small">截止日期黄色为将要截止，红色为已截止的任务</div>
+            </div>
+        </div>
+
+        <!-- 右侧 / 列表与筛选 -->
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="input-group input-group-sm" style="max-width:520px;">
+                    <span class="input-group-text">搜索</span>
+                    <input id="searchInput" class="form-control" placeholder="按标题或描述搜索" />
+                    <select id="filterCategory" class="form-select" style="max-width:140px;">
+                        <option value="">所有分类</option>
+                    </select>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    <select id="sortSelect" class="form-select form-select-sm" style="width:180px;">
+                        <option value="new">按最新</option>
+                        <option value="old">按最旧</option>
+                        <option value="due">按截止时间</option>
+                        <option value="incomplete">未完成优先</option>
+                    </select>
+                    <button id="refreshBtn" class="btn btn-outline-secondary btn-sm">刷新</button>
+                </div>
+            </div>
+
+            <div id="list" class="row g-3">
+                <!-- 任务卡片将渲染到这里 -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">编辑任务</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="editId">
+                    <div class="mb-2">
+                        <label for="editTitle" class="form-label small">标题</label>
+                        <input id="editTitle" class="form-control form-control-sm" required />
+                    </div>
+                    <div class="mb-2">
+                        <label for="editDesc" class="form-label small">描述</label>
+                        <textarea id="editDesc" class="form-control form-control-sm" rows="3"></textarea>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-8">
+                            <label for="editCategory" class="form-label small">分类</label>
+                            <input id="editCategory" class="form-control form-control-sm" />
+                        </div>
+                        <div class="col-4">
+                            <label for="editDueDate" class="form-label small">截止</label>
+                            <input id="editDueDate" type="datetime-local" class="form-control form-control-sm" />
+                        </div>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="editCompleted">
+                        <label class="form-check-label small" for="editCompleted">已完成</label>
+                    </div>
+                    <div id="editAlert"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button id="saveEditBtn" type="button" class="btn btn-primary">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS Bundle (includes Popper) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+
+<script>
+    const apiBase = '/api/tasks/';
+    let tasksCache = [];
+
+    // 辅助：把任意时间字符串格式化为 "YYYY-MM-DD HH:MM"（用于显示）
+    function formatDisplayDatetime(v){
+        if(!v) return '';
+        const d = new Date(v);
+        if(!isNaN(d)){
+            const Y = d.getFullYear();
+            const M = String(d.getMonth()+1).padStart(2,'0');
+            const D = String(d.getDate()).padStart(2,'0');
+            const hh = String(d.getHours()).padStart(2,'0');
+            const mm = String(d.getMinutes()).padStart(2,'0');
+            return `${Y}-${M}-${D} ${hh}:${mm}`;
+        }
+        // 如果不是标准日期，做简单替换（例如 "YYYY-MM-DDTHH:MM" -> "YYYY-MM-DD HH:MM"）
+        return String(v).replace('T',' ').slice(0,16);
+    }
+
+    // 辅助：把已有时间字符串转换为 datetime-local 可用的值 "YYYY-MM-DDTHH:MM"
+    function toInputDatetime(v){
+        if(!v) return '';
+        const d = new Date(v);
+        if(!isNaN(d)){
+            const Y = d.getFullYear();
+            const M = String(d.getMonth()+1).padStart(2,'0');
+            const D = String(d.getDate()).padStart(2,'0');
+            const hh = String(d.getHours()).padStart(2,'0');
+            const mm = String(d.getMinutes()).padStart(2,'0');
+            return `${Y}-${M}-${D}T${hh}:${mm}`;
+        }
+        // 如果已有格式为 "YYYY-MM-DD" 或 "YYYY-MM-DDTHH:MM"
+        if(String(v).includes('T')) return String(v).slice(0,16);
+        return `${String(v).trim()}T00:00`;
+    }
+
+    function showAlert(container, message, type='success'){
+        container.innerHTML = `<div class="alert alert-${type} alert-sm" role="alert">${message}</div>`;
+        setTimeout(()=> container.innerHTML = '', 3000);
+    }
+
+    async function fetchTasks(){
+        try{
+            const r = await fetch(apiBase);
+            if(!r.ok) throw new Error('获取任务失败');
+            tasksCache = await r.json();
+            updateCategoryFilter();
+            updateCount();
+            renderTasks(tasksCache);
+        }catch(err){
+            const list = document.getElementById('list');
+            list.innerHTML = `<div class="col-12"><div class="alert alert-danger">${err.message}</div></div>`;
+        }
+    }
+
+    function updateCount(){
+        const badge = document.getElementById('taskCount');
+        badge.textContent = tasksCache.length || 0;
+    }
+
+    function updateCategoryFilter(){
+        const sel = document.getElementById('filterCategory');
+        const cats = Array.from(new Set(tasksCache.map(t=>t.category).filter(Boolean)));
+        // clear existing but keep first option
+        sel.innerHTML = '<option value="">所有分类</option>' + cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+    }
+
+    function applyFilters(tasks){
+        const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+        const cat = document.getElementById('filterCategory').value;
+        let out = tasks.slice();
+        if(cat) out = out.filter(t=>t.category===cat);
+        if(q) out = out.filter(t=> (t.title||'').toLowerCase().includes(q) || (t.description||'').toLowerCase().includes(q));
+
+        const sort = document.getElementById('sortSelect').value;
+        if(sort==='new') out.sort((a,b)=> new Date(b.created_at||b.createdAt||0) - new Date(a.created_at||a.createdAt||0));
+        if(sort==='old') out.sort((a,b)=> new Date(a.created_at||a.createdAt||0) - new Date(b.created_at||b.createdAt||0));
+        if(sort==='due'){
+            // earliest due date first; tasks without due date go to the end
+            const getDueTime = (t)=>{
+                const v = t.due_date || t.dueDate;
+                if(!v) return Infinity;
+                const tt = new Date(v).getTime();
+                return isNaN(tt)? Infinity : tt;
+            };
+            out.sort((a,b)=> getDueTime(a) - getDueTime(b));
+        }
+        if(sort==='incomplete') out.sort((a,b)=> (a.completed?1:0) - (b.completed?1:0));
+
+        return out;
+    }
+
+    function renderTasks(tasks){
+        const el = document.getElementById('list');
+        el.innerHTML = '';
+        const items = applyFilters(tasks);
+        if(!items || items.length===0){
+            el.innerHTML = `<div class="col-12"><div class="card no-tasks"><div class="card-body"><h6 class="mb-2">当前没有匹配的任务</h6><p class="text-muted">使用左侧创建新任务或调整搜索/筛选条件。</p></div></div></div>`;
+            return;
+        }
+
+        for(const t of items){
+            const col = document.createElement('div'); col.className='col-12';
+            const card = document.createElement('div'); card.className='card task-card';
+            const body = document.createElement('div'); body.className='card-body d-flex justify-content-between align-items-start gap-3';
+
+            const left = document.createElement('div'); left.className='flex-grow-1';
+            const h = document.createElement('h6'); h.className='mb-1 task-title' + (t.completed? ' done' : ''); h.textContent = t.title || '(无标题)';
+            const metaRow = document.createElement('div'); metaRow.className='d-flex gap-2 align-items-center mb-2';
+            if(t.category) metaRow.innerHTML += `<span class="text-muted small">分类</span><span class="badge bg-light text-dark ms-1">${t.category}</span>`;
+            // 优先级展示已移除; 截止日期已移到卡片右侧按钮下方的日期区域显示
+            const desc = document.createElement('div'); desc.className='muted-small mb-2'; desc.textContent = t.description || '';
+            left.appendChild(h); left.appendChild(metaRow); left.appendChild(desc);
+
+            const right = document.createElement('div'); right.className='d-flex flex-column align-items-end gap-2';
+            const controls = document.createElement('div'); controls.className='d-flex align-items-center';
+
+            // completed switch
+            const chkLabel = document.createElement('div'); chkLabel.className='form-check form-switch me-2';
+            const chk = document.createElement('input'); chk.className='form-check-input'; chk.type='checkbox'; chk.checked = !!t.completed; chk.title='标记为已完成';
+            chk.onclick = async ()=>{ await toggleCompleted(t.id, chk.checked); };
+            chkLabel.appendChild(chk);
+
+            // edit
+            const editBtn = document.createElement('button'); editBtn.className='btn btn-sm btn-outline-primary ms-2'; editBtn.textContent='编辑'; editBtn.onclick = ()=> openEditModal(t);
+            const delBtn = document.createElement('button'); delBtn.className='btn btn-sm btn-outline-danger ms-2'; delBtn.textContent='删除';
+            delBtn.onclick = async ()=>{ if(!confirm('确认删除该任务吗？')) return; await deleteTask(t.id); };
+
+            controls.appendChild(chkLabel); controls.appendChild(editBtn); controls.appendChild(delBtn);
+            right.appendChild(controls);
+
+            // 日期显示（在按钮下面）
+            const dateDiv = document.createElement('div');
+            dateDiv.className = 'muted-small text-muted mt-1';
+            // 同时显示截止与创建时间，截止时间根据离当前时间判断高亮
+            const due = t.due_date || t.dueDate;
+            const created = t.created_at || t.createdAt;
+            if(created){
+                const createdSpan = document.createElement('div');
+                createdSpan.className = 'text-muted';
+                createdSpan.textContent = `创建：${formatDisplayDatetime(created)}`;
+                dateDiv.appendChild(createdSpan);
+            }
+            if(due){
+                const state = getDueState(due); // 'normal'|'soon'|'overdue'
+                const cls = state === 'soon' ? 'due-badge due-soon' : (state === 'overdue' ? 'due-badge due-overdue' : 'due-badge due-normal');
+                const dueSpan = document.createElement('div');
+                dueSpan.className = cls + ' mt-1';
+                dueSpan.textContent = `截止：${formatDisplayDatetime(due)}`;
+                dateDiv.appendChild(dueSpan);
+            }
+            if(!due && !created){
+                dateDiv.textContent = '日期：无';
+            }
+            right.appendChild(dateDiv);
+
+            body.appendChild(left); body.appendChild(right); card.appendChild(body); col.appendChild(card); el.appendChild(col);
+        }
+    }
+
+    // 新增：根据截止时间判断状态：'normal' | 'soon' | 'overdue'
+    function getDueState(dueValue){
+        if(!dueValue) return 'normal';
+        const d = new Date(dueValue);
+        if(isNaN(d)) return 'normal';
+        const now = new Date();
+        const diff = d.getTime() - now.getTime(); // ms
+        if(diff < 0) return 'overdue';
+        if(diff <= 60 * 60 * 1000) return 'soon'; // <= 1 hour
+        return 'normal';
+    }
+
+    async function addTask(data){
+        const r = await fetch(apiBase, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data)});
+        if(!r.ok) throw new Error('添加任务失败');
+        return await r.json();
+    }
+
+    async function updateTask(id, data){
+        const r = await fetch(apiBase + id, {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data)});
+        if(!r.ok) throw new Error('更新任务失败');
+        return await r.json();
+    }
+
+    async function deleteTask(id){
+        try{
+            const r = await fetch(apiBase + id, {method:'DELETE'});
+            if(!r.ok) throw new Error('删除任务失败');
+            await fetchTasks();
+        }catch(err){ alert(err.message); }
+    }
+
+    async function toggleCompleted(id, completed){
+        try{
+            const r = await fetch(apiBase + id);
+            if(!r.ok) throw new Error('获取任务失败');
+            const task = await r.json();
+            // 构造后端期望的 payload（due_date 使用 datetime-local 格式）
+            const payload = {
+                title: task.title || '',
+                description: task.description || '',
+                category: task.category || '',
+                due_date: toInputDatetime(task.due_date || task.dueDate || ''),
+                completed: !!completed,
+            };
+            await updateTask(id, payload);
+            fetchTasks();
+        }catch(err){ alert('更新完成状态失败'); }
+    }
+
+    // open modal and populate
+    let editModal;
+    function openEditModal(task){
+        if(!editModal) editModal = new bootstrap.Modal(document.getElementById('editModal'));
+        document.getElementById('editId').value = task.id;
+        document.getElementById('editTitle').value = task.title || '';
+        document.getElementById('editDesc').value = task.description || '';
+        document.getElementById('editCategory').value = task.category || '';
+        document.getElementById('editDueDate').value = toInputDatetime(task.due_date || task.dueDate || '');
+        document.getElementById('editCompleted').checked = !!task.completed;
+        document.getElementById('editAlert').innerHTML = '';
+        editModal.show();
+    }
+
+    // wire form events
+    document.getElementById('addForm').addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        const title = document.getElementById('title').value.trim();
+        const description = document.getElementById('desc').value.trim();
+        const category = document.getElementById('category').value.trim();
+        const due_date = document.getElementById('dueDate').value;
+        if(!title) return showAlert(document.getElementById('addAlert'), '标题不能为空', 'warning');
+        try{
+            await addTask({title, description, category, due_date});
+            showAlert(document.getElementById('addAlert'), '任务已添加', 'success');
+            document.getElementById('addForm').reset();
+            fetchTasks();
+        }catch(err){ showAlert(document.getElementById('addAlert'), err.message || '添加失败', 'danger'); }
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', ()=> document.getElementById('addForm').reset());
+
+    document.getElementById('saveEditBtn').addEventListener('click', async ()=>{
+        const id = document.getElementById('editId').value;
+        const title = document.getElementById('editTitle').value.trim();
+        const description = document.getElementById('editDesc').value.trim();
+        const category = document.getElementById('editCategory').value.trim();
+        const due_date = document.getElementById('editDueDate').value;
+        const completed = document.getElementById('editCompleted').checked;
+        if(!title) return showAlert(document.getElementById('editAlert'), '标题不能为空', 'warning');
+        try{
+            await updateTask(id, {title, description, category, due_date, completed});
+            showAlert(document.getElementById('editAlert'), '保存成功', 'success');
+            editModal.hide();
+            fetchTasks();
+        }catch(err){ showAlert(document.getElementById('editAlert'), err.message || '保存失败', 'danger'); }
+    });
+
+    // filters and controls
+    ['searchInput','filterCategory','sortSelect'].forEach(id=>{
+        document.getElementById(id).addEventListener('input', ()=> renderTasks(tasksCache));
+    });
+
+    document.getElementById('refreshBtn').addEventListener('click', fetchTasks);
+
+    // initial load
+    fetchTasks();
+</script>
+</body>
+</html>
