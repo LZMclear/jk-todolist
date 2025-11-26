@@ -1,29 +1,27 @@
 # jk-todolist
 小宇宙校招笔试 —— 基于 Go + Gin + database/sql 的 TODO List 示例项目
 
-# 提交步骤
-## feat：项目初始化
-- 初始化Go mod
-- 创建基础项目结构（handler，model，server，store）
-- 添加Gin框架依赖
-- 使用ping测试Gin是否成功运行
+## 本地运行（开发）
 
-## feat：定义数据类型
-- 初始化数据库表结构
-- 定义Task项的数据结构
+### 先决条件：Go 1.20+、MySQL。
 
-## feat：定义API接口
-- 定义增删改查Task的接口
-- 添加静态文件路由
+1. 克隆仓库并进入目录
+2. 在仓库根目录创建 `.env` 文件，格式：
+```env
+MYSQL_DSN="user:password@tcp(127.0.0.1:3306)/dbname?parseTime=true"
+PORT=8080
+```
+### 运行服务
 
-## feat：完善后端API核心功能
-- 实现获取Task列表接口
-- 实现创建Task接口
-- 实现更新Task接口
-- 实现删除Task接口
+#### 开发模式（不编译二进制）
+go run ./cmd/todo
 
-## feat：前端界面开发
-- 创建HTML页面
-- 美化界面
-- 使用JavaScript与后端API交互
-- 实现添加、编辑、删除Task的前端功能
+#### 编译并运行
+go build -o bin/todo ./cmd/todo ; .\bin\todo
+
+启动后访问：http://localhost:8080/
+
+注意：`store.InitDB` 会在启动时自动创建 `tasks` 表（如果数据库用户有足够权限，并且有 todolist 数据库）。
+
+## 运行界面
+![运行界面](https://blog-1316762285.cos.ap-beijing.myqcloud.com//todolist1.png)
