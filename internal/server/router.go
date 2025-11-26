@@ -1,10 +1,11 @@
 package server
 
 import (
+	"database/sql"
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter() *gin.Engine {
+func NewRouter(db *sql.DB) *gin.Engine {
 	r := gin.Default()
 
 	r.GET("/ping", func(c *gin.Context) {

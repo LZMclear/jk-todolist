@@ -7,3 +7,7 @@
 - 创建基础项目结构（handler，model，server，store）
 - 添加Gin框架依赖
 - 使用ping测试Gin是否成功运行
+
+## feat：定义数据类型
+- 初始化数据库表结构
+- 定义Task项的数据结构
