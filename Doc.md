@@ -25,7 +25,55 @@
 - `web/index.html`：前端静态页面（使用 Fetch API 与后端交互）。
 - 其它：`go.mod`/`go.sum` 等 Go 模块文件。
 
-## 4. 数据模型
+## 4. 需求细节与决策
+- 任务标题（title）为必填字段，不能为空。 描述（description）和分类（category）可选。
+- 任务完成状态（completed）为布尔值，前端通过复选框控制。
+- 截止时间（due_date）可选，前端使用 `datetime-local` 输入，后端以 UTC 存储。
+- 任务列表默认按创建时间排序，前端可按截止时间排序。
+- 任务过滤支持按分类和关键字（标题/描述）搜索。
+- 已完成任务在前端显示为灰色，并可通过复选框切换状态。
+- 截止时间高亮：已过期显示红色，1 小时内到期显示黄色。
+
+## 5. AI使用说明
+- 使用工具：Copilot（GPT5 mini）
+- 使用环节：
+  - 代码片段生成：如 CRUD 操作的 SQL 语句、Gin 路由注册等。
+  - 文档初稿编写：生成本说明文档的结构和部分内容。
+- 修改说明：AI 提供的代码片段经过手动调整以符合项目需求和最佳实践，例如调整错误处理逻辑、调整第三方库版本等。
+
+## 6. 运行与测试方式
+### 先决条件
+- Go 1.20++
+- MySQL 数据库
+### 本地运行步骤
+1. 克隆仓库并进入目录：
+   ```bash
+    git clone git@github.com:LZMclear/jk-todolist.git
+    cd jk-todolist
+    ```
+2. 创建 `.env` 文件，内容示例：
+   ```env
+    MYSQL_DSN="user:password@tcp(127.0.0.1:3306)/dbname?parseTime=true"
+    PORT=8080
+   ```
+3. 运行服务：
+   ```bash
+   go run ./cmd/todo
+   ```
+4. 访问：http://localhost:8080/
+
+### 已测试环境
+- Go 1.23.0，MySQL 8.0，Windows 10
+
+## 7. 总结与反思
+- 改进建议：
+  - 增加用户认证功能，支持多用户任务管理。
+  - 增加任务优先级字段，支持更复杂的排序。
+  - 使用前端框架（如 React/Vue）重构前端页面，提升用户体验。
+- 亮点：项目结构清晰，易于扩展和维护，适合作为学习 Go Web 开发的入门示例。
+
+
+## 8. 数据模型
 Task（tasks 表）字段：
 - id (BIGINT, 自增)
 - title (VARCHAR(255), 必填)
@@ -38,7 +86,7 @@ Task（tasks 表）字段：
 
 注意：仓库内的 `store.InitDB` 会在启动时自动创建 `tasks` 表（如果不存在）。
 
-## 5. API 文档（HTTP）
+## 9. API 文档（HTTP）
 基地址：/api/tasks/
 
 1. 列表
@@ -74,7 +122,7 @@ Task（tasks 表）字段：
 
 注意：以上接口行为由 `internal/handler/task.go` 实现，时间字段在后端统一以 UTC 存储，前端在展示时会按本地时间格式化。
 
-## 6. 前端说明（`web/index.html`）
+## 10. 前端说明（`web/index.html`）
 - 单文件静态页面，使用原生 JS + Fetch 调用后端 API。
 - 提供新增、编辑、删除、标记完成、按分类/关键字搜索与排序功能。
 - 截止时间高亮：

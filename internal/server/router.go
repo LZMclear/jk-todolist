@@ -25,9 +25,9 @@ func NewRouter(db *sql.DB) *gin.Engine {
 		{
 			t.GET("/", handler.ListTasks(db))
 			t.POST("/", handler.CreateTask(db))
-			t.GET(":id", handler.GetTask(db))
-			t.PUT(":id", handler.UpdateTask(db))
-			t.DELETE(":id", handler.DeleteTask(db))
+			t.GET("/:id", handler.GetTask(db))
+			t.PUT("/:id", handler.UpdateTask(db))
+			t.DELETE("/:id", handler.DeleteTask(db))
 		}
 	}
 	return r
