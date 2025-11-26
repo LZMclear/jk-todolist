@@ -62,6 +62,16 @@
    ```
 4. 访问：http://localhost:8080/
 
+### 使用docker构建容器部署服务
+1. 构建镜像
+    ```bash
+    docker build -t jk-todolist:latest .
+    ```
+2. 通过compose启动
+    ```bash
+    docker compose up -d
+    ```
+
 ### 已测试环境
 - Go 1.23.0，MySQL 8.0，Windows 10
 
