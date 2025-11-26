@@ -21,3 +21,9 @@
 - 实现创建Task接口
 - 实现更新Task接口
 - 实现删除Task接口
+
+## feat：前端界面开发
+- 创建HTML页面
+- 美化界面
+- 使用JavaScript与后端API交互
+- 实现添加、编辑、删除Task的前端功能
