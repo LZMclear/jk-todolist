@@ -19,9 +19,24 @@ go run ./cmd/todo
 #### 编译并运行
 go build -o bin/todo ./cmd/todo ; .\bin\todo
 
+### 使用docker构建容器部署服务
+
+1. 构建镜像
+    ```bash
+    docker build -t jk-todolist:latest .
+    ```
+2. 通过compose启动
+    ```bash
+    docker compose up -d
+    ```
+   
 启动后访问：http://localhost:8080/
 
 注意：`store.InitDB` 会在启动时自动创建 `tasks` 表（如果数据库用户有足够权限，并且有 todolist 数据库）。
 
-## 运行界面
+## 本地运行界面
 ![运行界面](https://blog-1316762285.cos.ap-beijing.myqcloud.com//todolist1.png)
+
+## 服务器部署运行界面
+可以通过访问 http://43.138.33.205:8083/ 查看运行效果
+![服务器部署运行界面](https://blog-1316762285.cos.ap-beijing.myqcloud.com//20251126194510.png)
